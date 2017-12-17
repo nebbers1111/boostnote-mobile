@@ -8,7 +8,8 @@ import {
   View,
   Clipboard,
   ActivityIndicator,
-  ScrollView
+  ScrollView,
+  TextInput
 } from 'react-native'
 import {
   Container,
@@ -28,7 +29,6 @@ import Modal from 'react-native-modalbox'
 import CoffeeScript from '../../lib/CofeeScriptEval'
 
 const js2coffee = require('js2coffee/dist/js2coffee');
-import MultilineTextInput from '../../components/MultilineTextInput'
 import NotePreview from './preview/NotePreviewComponent'
 import NoteInputSupport from './inputSupport/NoteInputSupport'
 import removeMd from 'remove-markdown-and-html'
@@ -143,7 +143,7 @@ export default class DropboxNoteModal extends React.Component {
 
   keyboardDidShow(e) {
     this.setState({
-      visibleHeight: Dimensions.get('window').height - e.endCoordinates.height - 100,
+      visibleHeight: Dimensions.get('window').height - e.endCoordinates.height - 140,
     })
   }
 
@@ -157,20 +157,18 @@ export default class DropboxNoteModal extends React.Component {
     if (this.state.isLeftSegmentActive) {
       return <View style={{ flex: 1 }}>
         <ScrollView keyboardShouldPersistTaps='always'>
-          <MultilineTextInput
+          <TextInput
             ref="TextInput"
-            style={Platform.OS === 'android' ? { margin: 8, height: this.state.visibleHeight - 30 } : {
-              margin: 8,
-              height: this.state.visibleHeight - 15
-            }}
+            multiline={true}
+            style={{ margin: 8, height: this.state.visibleHeight - 55 }}
             onChangeText={(e) => this.onChangeText(e)}
             value={this.state.note.content}
-            selectionChange={(e) => {
+            onSelectionChange={(e) => {
               this.setState({ endOfSelection: e.nativeEvent.selection.end })
             }}
             autoFocus={true}
             textAlignVertical={'top'}>
-          </MultilineTextInput>
+          </TextInput>
           <NoteInputSupport
             insertMarkdownBetween={this.insertMarkdownBetween.bind(this)}
             pasteContent={this.pasteContent.bind(this)}
@@ -178,7 +176,10 @@ export default class DropboxNoteModal extends React.Component {
         </ScrollView>
       </View>
     } else {
-      return <NotePreview text={this.state.note.content}/>
+      return <NotePreview
+        text={this.state.note.content}
+        onTapCheckBox={this.tapCheckBox.bind(this)}
+      />
     }
   }
 
@@ -238,6 +239,26 @@ export default class DropboxNoteModal extends React.Component {
     this.saveNoteToDropbox()
     this.props.setNoteModalClose()
 
+  }
+
+  /**
+   * Toggle checkbox in markdown text
+   * @param line
+   */
+  tapCheckBox(line) {
+    const lines = this.state.note.content.split('\n');
+
+    const targetLine = lines[line]
+
+    const checkedMatch = /\[x\]/i
+    const uncheckedMatch = /\[ \]/
+    if (targetLine.match(checkedMatch)) {
+      lines[line] = targetLine.replace(checkedMatch, '[ ]')
+    }
+    if (targetLine.match(uncheckedMatch)) {
+      lines[line] = targetLine.replace(uncheckedMatch, '[x]')
+    }
+    this.updateNoteContent(lines.join('\n'))
   }
 
   render() {
